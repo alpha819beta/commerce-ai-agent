@@ -95,6 +95,26 @@
     </div>
   </div>
 
+  <!-- Admin Assistant Chat Widget -->
+  <button id="chat-toggle" class="chat-toggle" aria-label="Open admin assistant">💬 Assistant</button>
+  <div id="chat-panel" class="chat-panel" style="display: none;">
+    <div class="chat-header">
+      <span>Admin Assistant</span>
+      <button id="chat-close" class="chat-close" aria-label="Close assistant">&times;</button>
+    </div>
+    <div id="chat-messages" class="chat-messages">
+      <div class="chat-message chat-message-assistant">
+        Hi! I can look up or update order status, cancel orders, and update product price/description. Try "cancel order ORD-1043" or "change the price of SKU-001 to $49.99".
+      </div>
+    </div>
+    <div id="chat-error" class="chat-error" style="display: none;"></div>
+    <form id="chat-form" class="chat-form">
+      <input type="text" id="chat-input" class="chat-input" placeholder="Ask the assistant..." autocomplete="off" required>
+      <button type="submit" class="btn btn-primary">Send</button>
+    </form>
+  </div>
+
   <script src="/admin/admin.js"></script>
+  <script src="/admin/chat.js"></script>
 </body>
 </html>
