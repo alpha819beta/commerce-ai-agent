@@ -32,6 +32,7 @@ async function sendChatMessage(message) {
   submitButton.disabled = true;
 
   const pendingBubble = appendChatMessage('pending', 'Thinking...');
+  let assistantBubble = null;
 
   try {
     const response = await fetch(`${AGENT_SERVICE_URL}/chat`, {
@@ -40,14 +41,49 @@ async function sendChatMessage(message) {
       body: JSON.stringify({ sessionId: chatSessionId, message }),
     });
 
-    const result = await response.json();
-    pendingBubble.remove();
-
     if (!response.ok) {
+      const result = await response.json();
       throw new Error(result.error?.message || 'The assistant service returned an error.');
     }
 
-    appendChatMessage('assistant', result.reply);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let streamError = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() ?? '';
+
+      for (const rawEvent of events) {
+        const dataLine = rawEvent.split('\n').find((line) => line.startsWith('data:'));
+        if (!dataLine) continue;
+        const payload = JSON.parse(dataLine.slice('data:'.length).trim());
+
+        if (payload.type === 'delta') {
+          if (!assistantBubble) {
+            pendingBubble.remove();
+            assistantBubble = appendChatMessage('assistant', '');
+          }
+          assistantBubble.textContent += payload.text;
+          document.getElementById('chat-messages').scrollTop = 1e9;
+        } else if (payload.type === 'error') {
+          streamError = payload.message;
+        }
+      }
+    }
+
+    if (streamError) {
+      throw new Error(streamError);
+    }
+    if (!assistantBubble) {
+      pendingBubble.remove();
+      appendChatMessage('assistant', "I didn't produce a response for that — could you rephrase?");
+    }
 
     // Refresh the dashboard lists in case the assistant changed an order or product.
     if (typeof loadRecentOrders === 'function') loadRecentOrders();

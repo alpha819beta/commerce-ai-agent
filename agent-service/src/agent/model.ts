@@ -10,9 +10,15 @@ import { config } from '../config';
  * AI-SDK-style model object. This adapter implements that extension point directly against
  * Ollama's OpenAI-compatible `/chat/completions` endpoint.
  *
- * Only the non-streaming turn-by-turn flow `LlmAgent`/`Runner` actually use for a text chat
- * is implemented: `generateContentAsync` always makes one blocking call and yields a single
- * complete response (a stream of length one is a valid stream). `connect()` (bidirectional
+ * `generateContentAsync` always streams from Ollama (`stream: true`) and yields a partial
+ * `LlmResponse` (cumulative text so far, `partial: true`) for every text delta Ollama sends,
+ * then one final non-partial `LlmResponse` with the complete text or tool call(s). ADK's
+ * `LlmAgent`/`Runner` forward every yielded `LlmResponse` to the caller as it arrives
+ * regardless of `partial` (only non-partial events get persisted to session history — see
+ * `BaseSessionService.appendEvent`/`Runner.processAndAppendEvent` — partials are purely a
+ * transient signal to whoever is consuming `Runner.runAsync`, which is exactly how this
+ * surfaces real-time streaming all the way out through `agent/agent.ts`'s `streamChatTurn`
+ * without needing ADK's separate live/bidi (`runLive`) machinery). `connect()` (bidirectional
  * voice/video) is not implemented since the chat widget never uses it.
  */
 export class OllamaLlm extends BaseLlm {
@@ -50,8 +56,74 @@ export class OllamaLlm extends BaseLlm {
       return;
     }
 
-    const json = await res.json();
-    yield chatCompletionToLlmResponse(json);
+    if (!res.body) {
+      yield unreachableResponse('Ollama returned a response with no body.');
+      return;
+    }
+
+    yield* this.streamResponse(res.body);
+  }
+
+  private async *streamResponse(body: ReadableStream<Uint8Array>): AsyncGenerator<LlmResponse, void> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let accumulatedText = '';
+    const toolCalls = new Map<number, { id?: string; name?: string; arguments: string }>();
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const payload = trimmed.slice('data:'.length).trim();
+          if (payload === '[DONE]') continue;
+
+          let chunk: any;
+          try {
+            chunk = JSON.parse(payload);
+          } catch {
+            continue;
+          }
+
+          const delta = chunk?.choices?.[0]?.delta;
+          if (!delta) continue;
+
+          if (typeof delta.content === 'string' && delta.content.length > 0) {
+            accumulatedText += delta.content;
+            yield { partial: true, content: { role: 'model', parts: [{ text: accumulatedText }] } };
+          }
+
+          if (Array.isArray(delta.tool_calls)) {
+            for (const tc of delta.tool_calls) {
+              const existing = toolCalls.get(tc.index) ?? { arguments: '' };
+              if (tc.id) existing.id = tc.id;
+              if (tc.function?.name) existing.name = tc.function.name;
+              if (tc.function?.arguments) existing.arguments += tc.function.arguments;
+              toolCalls.set(tc.index, existing);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    if (toolCalls.size > 0) {
+      const parts: Part[] = Array.from(toolCalls.values()).map((tc) => ({
+        functionCall: { id: tc.id, name: tc.name || '', args: safeParseJson(tc.arguments) },
+      }));
+      yield { content: { role: 'model', parts } };
+    } else {
+      yield { content: { role: 'model', parts: [{ text: accumulatedText }] } };
+    }
   }
 
   async connect(): Promise<BaseLlmConnection> {
@@ -123,8 +195,16 @@ function buildChatCompletionRequest(model: string, llmRequest: LlmRequest) {
     model,
     messages,
     ...(tools.length > 0 ? { tools } : {}),
-    stream: false,
+    stream: true,
   };
+}
+
+function safeParseJson(text: string): Record<string, unknown> {
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return {};
+  }
 }
 
 function extractSystemInstruction(llmRequest: LlmRequest): string | undefined {
@@ -196,33 +276,4 @@ function schemaToJsonSchema(schema: Schema): Record<string, unknown> {
     );
   }
   return result;
-}
-
-function chatCompletionToLlmResponse(json: any): LlmResponse {
-  const choice = json?.choices?.[0];
-  const message = choice?.message;
-
-  if (!message) {
-    return unreachableResponse('Ollama returned an unexpected response shape.');
-  }
-
-  const parts: Part[] = [];
-
-  if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
-    for (const toolCall of message.tool_calls as OpenAiToolCall[]) {
-      let args: Record<string, unknown> = {};
-      try {
-        args = JSON.parse(toolCall.function.arguments || '{}');
-      } catch {
-        args = {};
-      }
-      parts.push({ functionCall: { id: toolCall.id, name: toolCall.function.name, args } });
-    }
-  } else if (typeof message.content === 'string' && message.content.length > 0) {
-    parts.push({ text: message.content });
-  } else {
-    parts.push({ text: '' });
-  }
-
-  return { content: { role: 'model', parts } };
 }

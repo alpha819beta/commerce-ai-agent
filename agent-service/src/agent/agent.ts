@@ -1,4 +1,4 @@
-import { InMemoryRunner, isFinalResponse, LlmAgent, stringifyContent } from '@google/adk';
+import { InMemoryRunner, LlmAgent, stringifyContent } from '@google/adk';
 import { createOllamaModel } from './model';
 import { allTools } from './toolDefs';
 
@@ -35,8 +35,18 @@ function getRunner(): InMemoryRunner {
  * Runs one turn of the conversation for the given session, maintaining
  * short-term context in ADK's in-memory session service (per-sessionId
  * history, lost on service restart — see README limitations).
+ *
+ * Yields text deltas as they arrive from the model so the caller (the SSE
+ * handler in server.ts) can forward them to the browser in real time.
+ * `OllamaLlm.generateContentAsync` (agent/model.ts) yields the model's
+ * *cumulative* text so far on every partial chunk; this generator diffs
+ * against what it already emitted so each yielded chunk here is the true
+ * incremental delta. Tool-call turns produce no text (only the follow-up
+ * turn that summarizes the tool result does), so nothing is yielded while a
+ * tool is being called — streaming resumes once the model starts producing
+ * its summary.
  */
-export async function runChatTurn(sessionId: string, message: string): Promise<string> {
+export async function* streamChatTurn(sessionId: string, message: string): AsyncGenerator<string, void> {
   const runner = getRunner();
 
   await runner.sessionService.getOrCreateSession({
@@ -45,16 +55,29 @@ export async function runChatTurn(sessionId: string, message: string): Promise<s
     sessionId,
   });
 
-  let finalText = '';
+  let emittedLength = 0;
+  let sawAnyText = false;
+
   for await (const event of runner.runAsync({
     userId: sessionId,
     sessionId,
     newMessage: { role: 'user', parts: [{ text: message }] },
   })) {
-    if (isFinalResponse(event) && event.content) {
-      finalText = stringifyContent(event);
+    const text = stringifyContent(event);
+    if (!text) continue;
+
+    sawAnyText = true;
+    if (text.length > emittedLength) {
+      yield text.slice(emittedLength);
+      emittedLength = text.length;
+    }
+
+    if (!event.partial) {
+      emittedLength = 0;
     }
   }
 
-  return finalText || "I didn't produce a response for that — could you rephrase?";
+  if (!sawAnyText) {
+    yield "I didn't produce a response for that — could you rephrase?";
+  }
 }
