@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Control Panel</title>
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+  <div class="admin-header">
+    <div class="container">
+      <h1>⚙️ Admin Control Panel</h1>
+      <nav>
+        <a href="/">View Store</a>
+      </nav>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="admin-content">
+      <!-- Recent Orders Section -->
+      <section class="section">
+        <h2>Recent Orders</h2>
+        <div id="orders-loading" class="loading">Loading orders...</div>
+        <div id="orders-error" class="error" style="display: none;"></div>
+        <div id="orders-list" class="orders-list"></div>
+      </section>
+
+      <!-- Products Section -->
+      <section class="section">
+        <h2>Products</h2>
+        <div class="products-controls">
+          <input type="text" id="product-search" placeholder="Search products..." class="search-input">
+          <button id="refresh-products" class="btn btn-secondary">Refresh</button>
+        </div>
+        <div id="products-loading" class="loading">Loading products...</div>
+        <div id="products-error" class="error" style="display: none;"></div>
+        <div id="products-list" class="products-list"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Edit Product Modal -->
+  <div id="edit-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Product</h2>
+        <button class="modal-close" id="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-product-form">
+          <div class="form-group">
+            <label for="edit-name">Name</label>
+            <input type="text" id="edit-name" name="name" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-description">Description</label>
+            <textarea id="edit-description" name="description" rows="4"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="edit-short-description">Short Description</label>
+            <input type="text" id="edit-short-description" name="shortDescription">
+          </div>
+          <div class="form-group">
+            <label for="edit-status">Status</label>
+            <select id="edit-status" name="status">
+              <option value="active">Active</option>
+              <option value="draft">Draft</option>
+              <option value="archived">Archived</option>
+              <option value="discontinued">Discontinued</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-price">Price (Default Variant)</label>
+            <input type="number" id="edit-price" name="price" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label for="edit-vendor">Vendor</label>
+            <input type="text" id="edit-vendor" name="vendor">
+          </div>
+          <div class="form-group">
+            <label for="edit-brand">Brand</label>
+            <input type="text" id="edit-brand" name="brand">
+          </div>
+          <div class="form-group">
+            <label for="edit-tags">Tags (comma-separated)</label>
+            <input type="text" id="edit-tags" name="tags" placeholder="tag1, tag2, tag3">
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="cancel-edit">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

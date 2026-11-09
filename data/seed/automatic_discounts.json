@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "lastModified": "2026-11-08T17:34:55.571Z",
+  "data": [
+    {
+      "id": "5e255c9e-b19a-49c3-9332-987e8a2dfb78",
+      "name": "Buy 3 T-Shirts Get 15% Off",
+      "description": "Automatically applied when buying 3 or more t-shirts",
+      "status": "active",
+      "type": "percentage",
+      "value": 15,
+      "target": "specific_products",
+      "targetIds": [
+        "0f107892-77b6-4976-b1f8-935e33413280"
+      ],
+      "conditions": [
+        {
+          "type": "minimum_quantity",
+          "value": 3
+        }
+      ],
+      "priority": 10,
+      "startDate": "2026-11-08T17:34:55.567Z",
+      "stackable": true,
+      "createdAt": "2026-11-08T17:34:55.567Z",
+      "updatedAt": "2026-11-08T17:34:55.567Z"
+    },
+    {
+      "id": "0bebd731-2091-4303-a378-250153b52b6a",
+      "name": "5% Off Orders Over $200",
+      "description": "Automatic 5% discount on large orders",
+      "status": "active",
+      "type": "percentage",
+      "value": 5,
+      "target": "all",
+      "conditions": [],
+      "minimumPurchaseAmount": 200,
+      "maximumDiscountAmount": 50,
+      "priority": 5,
+      "startDate": "2026-11-08T17:34:55.567Z",
+      "stackable": true,
+      "createdAt": "2026-11-08T17:34:55.567Z",
+      "updatedAt": "2026-11-08T17:34:55.567Z"
+    }
+  ]
+}

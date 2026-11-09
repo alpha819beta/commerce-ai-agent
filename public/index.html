@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store - E-Commerce Platform</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <h1>🛒 Our Store</h1>
+      <p>Discover amazing products</p>
+    </div>
+  </div>
+  
+  <div class="container">
+    <div class="products-container">
+      <div id="stats" class="stats" style="display: none;">
+        <div class="stat-item">
+          <div class="stat-value" id="total-products">0</div>
+          <div class="stat-label">Products</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="active-products">0</div>
+          <div class="stat-label">Active</div>
+        </div>
+      </div>
+      
+      <div id="loading" class="loading">Loading products...</div>
+      <div id="error" class="error" style="display: none;"></div>
+      <div id="products-grid" class="products-grid" style="display: none;"></div>
+      <div id="empty" class="empty" style="display: none;">No products found</div>
+    </div>
+  </div>
+  
+  <script src="/script.js"></script>
+</body>
+</html>

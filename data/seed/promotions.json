@@ -1,0 +1,172 @@
+{
+  "version": "1.0.0",
+  "lastModified": "2026-11-08T17:34:55.571Z",
+  "data": [
+    {
+      "id": "e8e28162-ac7d-4d9a-80f6-3c66a186dbf3",
+      "name": "Summer Sale - 20% Off",
+      "description": "Get 20% off all items during our summer sale event",
+      "status": "active",
+      "type": "percentage",
+      "value": 20,
+      "target": "all",
+      "conditions": [],
+      "minimumPurchaseAmount": 50,
+      "maximumDiscountAmount": 100,
+      "usageLimit": 1000,
+      "usageCount": 45,
+      "stackable": false,
+      "priority": 10,
+      "startDate": "2026-11-08T17:34:55.571Z",
+      "endDate": "2027-02-08T17:34:55.571Z",
+      "codes": [
+        {
+          "id": "3f7d2701-e629-4466-acd0-4c144e669d46",
+          "promotionId": "e8e28162-ac7d-4d9a-80f6-3c66a186dbf3",
+          "code": "SUMMER20",
+          "usageLimit": 500,
+          "usageLimitPerCustomer": 1,
+          "usageCount": 45,
+          "isActive": true,
+          "createdAt": "2026-11-08T17:34:55.567Z",
+          "updatedAt": "2026-11-08T17:34:55.567Z"
+        }
+      ],
+      "excludeSaleItems": true,
+      "createdAt": "2026-11-08T17:34:55.567Z",
+      "updatedAt": "2026-11-08T17:34:55.567Z"
+    },
+    {
+      "id": "a6074946-f5d7-401e-96bf-124784142a19",
+      "name": "Free Shipping Over $75",
+      "description": "Free shipping on orders over $75",
+      "status": "active",
+      "type": "free_shipping",
+      "value": 0,
+      "target": "all",
+      "conditions": [
+        {
+          "type": "minimum_purchase_amount",
+          "value": 75
+        }
+      ],
+      "minimumPurchaseAmount": 75,
+      "usageCount": 120,
+      "stackable": true,
+      "priority": 5,
+      "startDate": "2026-10-08T16:34:55.571Z",
+      "endDate": "2027-02-08T17:34:55.571Z",
+      "codes": [
+        {
+          "id": "cfa808e9-fddf-44da-ac3b-a3a0c9671e45",
+          "promotionId": "a6074946-f5d7-401e-96bf-124784142a19",
+          "code": "FREESHIP",
+          "usageCount": 120,
+          "isActive": true,
+          "createdAt": "2026-11-08T17:34:55.567Z",
+          "updatedAt": "2026-11-08T17:34:55.567Z"
+        }
+      ],
+      "excludeSaleItems": false,
+      "createdAt": "2026-11-08T17:34:55.567Z",
+      "updatedAt": "2026-11-08T17:34:55.567Z"
+    },
+    {
+      "id": "9d34613b-bacc-4534-852f-c48eb6c53f62",
+      "name": "New Customer Discount",
+      "description": "$15 off for first-time customers",
+      "status": "active",
+      "type": "fixed_amount",
+      "value": 15,
+      "target": "all",
+      "conditions": [
+        {
+          "type": "first_order",
+          "value": true
+        }
+      ],
+      "minimumPurchaseAmount": 30,
+      "usageLimitPerCustomer": 1,
+      "usageCount": 89,
+      "stackable": false,
+      "priority": 15,
+      "startDate": "2026-10-08T16:34:55.571Z",
+      "codes": [
+        {
+          "id": "b7e5863d-b33d-461e-8da5-ced754d54699",
+          "promotionId": "9d34613b-bacc-4534-852f-c48eb6c53f62",
+          "code": "WELCOME15",
+          "usageLimitPerCustomer": 1,
+          "usageCount": 89,
+          "isActive": true,
+          "createdAt": "2026-11-08T17:34:55.567Z",
+          "updatedAt": "2026-11-08T17:34:55.567Z"
+        }
+      ],
+      "excludeSaleItems": false,
+      "createdAt": "2026-11-08T17:34:55.567Z",
+      "updatedAt": "2026-11-08T17:34:55.567Z"
+    },
+    {
+      "id": "866f6361-0278-4b50-bb4e-8e905cbffaea",
+      "name": "Electronics 10% Off",
+      "description": "10% off all electronics",
+      "status": "active",
+      "type": "percentage",
+      "value": 10,
+      "target": "specific_categories",
+      "targetIds": [
+        "64fcaafd-6866-4285-982d-2fa6bab47b63"
+      ],
+      "conditions": [],
+      "usageCount": 30,
+      "stackable": true,
+      "priority": 8,
+      "startDate": "2026-11-08T17:34:55.567Z",
+      "endDate": "2027-02-08T17:34:55.571Z",
+      "codes": [
+        {
+          "id": "d3802d5b-1197-4626-9ca7-a646ee0d1fc4",
+          "promotionId": "866f6361-0278-4b50-bb4e-8e905cbffaea",
+          "code": "TECH10",
+          "usageCount": 30,
+          "isActive": true,
+          "createdAt": "2026-11-08T17:34:55.567Z",
+          "updatedAt": "2026-11-08T17:34:55.567Z"
+        }
+      ],
+      "excludeSaleItems": false,
+      "createdAt": "2026-11-08T17:34:55.567Z",
+      "updatedAt": "2026-11-08T17:34:55.567Z"
+    },
+    {
+      "id": "eb4f59e7-9e76-4aa7-aae0-1e9ce45d4ae8",
+      "name": "Expired Promo",
+      "description": "This promotion has expired",
+      "status": "expired",
+      "type": "percentage",
+      "value": 50,
+      "target": "all",
+      "conditions": [],
+      "usageCount": 200,
+      "stackable": false,
+      "priority": 1,
+      "startDate": "2023-01-01T00:00:00.000Z",
+      "endDate": "2023-12-31T00:00:00.000Z",
+      "codes": [
+        {
+          "id": "aae8fa10-be6e-460d-9f57-1ad2015022f7",
+          "promotionId": "eb4f59e7-9e76-4aa7-aae0-1e9ce45d4ae8",
+          "code": "OLDCODE",
+          "usageCount": 200,
+          "isActive": false,
+          "createdAt": "2026-11-08T17:34:55.567Z",
+          "updatedAt": "2026-11-08T17:34:55.567Z"
+        }
+      ],
+      "excludeSaleItems": false,
+      "createdAt": "2026-11-08T17:34:55.567Z",
+      "updatedAt": "2026-11-08T17:34:55.567Z"
+    }
+  ]
+}
