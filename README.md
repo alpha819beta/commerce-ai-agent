@@ -1,240 +1,130 @@
 # AI Agent Engineering Assessment
 
-## Overview
+A mock e-commerce platform (storefront + admin dashboard + REST API) with a natural-language
+admin assistant: a chatbot embedded in the admin dashboard that can look up and change order
+status, cancel orders, and update product price/description by calling the existing Backend API.
 
-This project simulates a simplified e-commerce platform and asks you to build a **natural-language AI agent** that assists a store administrator in managing orders and products.
+## Architecture
 
-You are provided with:
-- A running **storefront UI** (customer-facing)
-- An **admin UI** for viewing and managing store data
-- A fully functional **backend API**
+```
+Admin UI (Chatbot widget)  ──POST /chat──▶  Agent Service (Express + Google ADK)
+http://localhost:3000/admin                  http://localhost:3001
+                                                      │
+                                                      │ HTTP (fetch)
+                                                      ▼
+                                              Backend API
+                                              http://localhost:3000/api
+                                                      │
+                                              Ollama (Qwen3, local)
+                                              http://localhost:11434
+```
 
-Your task is to:
-1. Implement a **chatbot embedded in the admin UI**
-2. Implement a **backend agent service** that the chatbot communicates with
-3. Enable the agent to interpret natural language requests and make authorized changes via backend APIs
+- **Backend API** (root project, `src/`) — unchanged from the original mock e-commerce API:
+  products/variants/inventory, orders/fulfillment/refunds, promotions. Storefront at `/`,
+  admin dashboard at `/admin`, API docs at `/api`.
+- **Agent Service** (`agent-service/`) — a separate Express service built with
+  [Google ADK for TypeScript](https://google.github.io/adk-docs/get-started/typescript/)
+  (`@google/adk`). It exposes one endpoint, `POST /chat`, that runs one turn of an `LlmAgent`
+  against a local Ollama model and streams the natural-language reply back as Server-Sent
+  Events, token by token. The agent only ever talks to the Backend API over HTTP — it has no
+  direct access to the data files — so every action it takes is validated the same way a human
+  admin's click would be.
+- **Chatbot widget** (`public/admin.html`, `public/admin/chat.js`, `public/admin/admin.css`) —
+  a small vanilla-JS chat panel embedded in the existing admin page. It POSTs to the agent
+  service, renders the streamed reply as it arrives, and refreshes the existing orders/products
+  lists once the reply finishes, so a successful action is visible immediately without a page
+  reload.
 
-This assessment is designed to evaluate how you design, implement, and reason about AI agents in a realistic product environment.
+Why a separate service instead of folding the agent into `server.ts`: the assignment's own
+diagram and "Agent Service Requirements" describe it as a distinct component, and keeping it
+separate means the agent can only reach the store through the same API surface any other
+client uses — it can't reach into storage directly.
 
----
+Why a vanilla-JS widget instead of the suggested Vercel AI SDK UI (React) components: the
+existing admin page has zero build tooling (plain HTML/CSS/JS served statically by Express).
+Pulling in React and a bundler for one chat widget would be a disproportionate increase in
+complexity for this assessment, and would fight the grain of the existing codebase.
 
-## Application Structure
-
-After setup, the application exposes three primary surfaces:
-
-### 1. Storefront (Customer View)
-- URL: `http://localhost:3000/`
-- Read-only storefront for browsing products
-- Included for realism and data generation
-
-### 2. Admin Dashboard
-- URL: `http://localhost:3000/admin`
-- Displays:
-    - Recent orders
-    - Product catalog
-- Allows:
-    - Updating order status
-    - Editing product details (name, description, price)
-
-You will extend this page by embedding a **chatbot interface** that allows an administrator to manage the store using natural language.
-
-### 3. Backend API
-- Base URL: `http://localhost:3000/api`
-- Full API documentation available at `http://localhost:3000/api`
-
----
-
-## Getting Started
+## Setup
 
 ### Prerequisites
-- Node.js 18+
-- npm or yarn
-- Ollama installed locally
+- Node.js 24.13+ and npm 11.8+ (required by `@google/adk`)
+- [Ollama](https://ollama.com) installed and running locally
+- A Qwen3 model (≤30B) pulled in Ollama, e.g.:
+  ```bash
+  ollama pull qwen3:4b
+  ```
 
-### Setup
-
+### 1. Backend API + storefront + admin UI (root project)
 ```bash
 npm install
 npm run dev
 ```
+Runs at `http://localhost:3000` (storefront `/`, admin `/admin`, API docs `/api`).
 
-The application runs at `http://localhost:3000`.
-
----
-
-## Your Task
-
-### High-Level Goals
-
-You will implement:
-
-1. **A simple chatbot UI embedded in the admin page**
-2. **A backend agent service**
-3. **Agent logic** that translates natural language into API actions
-
-The focus is on correctness, clarity, and sound engineering judgment - not UI polish or exhaustive feature coverage.
-
----
-
-## Chatbot UI Requirements
-
-### Location
-- Embedded directly on the **admin page** (`/admin`)
-
-### Implementation
-- Use an off-the-shelf chatbot UI library  
-  **Suggested:** https://ai-sdk.dev/docs/ai-sdk-ui/overview
-
-### Responsibilities
-- Accept natural language input from an admin user
-- Display conversational responses
-- Show confirmations, summaries, and error messages
-- Communicate with your agent service via HTTP (or similar)
-
----
-
-## Agent Service Requirements
-
-### Framework
-- **Required:** Google Agent Development Kit (ADK) for TypeScript  
-  https://google.github.io/adk-docs/get-started/
-
-### LLM Provider
-- **Required:** Ollama
-- Choose any Qwen3 model up to 30b parameters
-
-### Responsibilities
-The agent service should:
-- Accept natural language requests from the chatbot
-- Maintain short-term conversational context
-- Decide when and how to call backend APIs
-- Execute actions safely and deterministically
-- Return clear, human-readable responses
-
----
-
-## Required Agent Capabilities
-
-### Orders
-- Change order status (e.g., pending → shipped → cancelled)
-- Validate order existence and transitions
-- Handle errors gracefully and explain outcomes
-
-Example:
+### 2. Agent service
+```bash
+cd agent-service
+npm install
+cp .env.example .env   # adjust OLLAMA_MODEL etc. if needed
+npm run dev
 ```
-"Cancel order ORD-1043"
+Runs at `http://localhost:3001`. Requires Ollama to be running locally with the model in
+`OLLAMA_MODEL` already pulled.
+
+Open `http://localhost:3000/admin`, click the "💬 Assistant" button, and chat.
+
+### Tests
+```bash
+npm test                 # root project: Backend API route tests
+cd agent-service && npm test   # agent service: tool/validation/error-handling unit tests
 ```
 
-### Products
-- Update product description
-- Update product price
-- Validate inputs (e.g., non-negative prices)
+## Agent Capabilities
 
-Example:
-```
-"Change the price of SKU-001 to $49.99"
-```
+- **Orders**: look up status ("what's the status of ORD-1043?"), change status ("mark
+  ORD-1043 as shipped"), cancel an order ("cancel order ORD-1043"). Status changes are
+  validated against the same status enum the Backend API enforces, and API-level errors
+  (e.g. cancelling an already-cancelled order) are relayed back as plain language rather than
+  failing silently.
+- **Products**: look up a product ("what's the price of SKU-001?"), update price ("change the
+  price of SKU-001 to $49.99"), update description. Prices are validated as non-negative
+  numbers before any API call is made. Products/orders can be referred to by SKU/order number,
+  raw id, or (for products) name — resolution logic lives in `agent-service/src/resolvers.ts`.
+- Anything outside these two areas, the agent is instructed to say so rather than improvise.
 
-You are not required to support every API endpoint. Depth and correctness matter more than breadth.
+## Testing strategy
 
----
+Per the assignment's guidance to test "intent handling, validation, and error paths" while
+mocking external dependencies, the agent service's unit tests (`agent-service/src/__tests__/`)
+target the plain TypeScript functions behind each ADK tool — `apiClient`, `resolvers`,
+`tools/orders`, `tools/products` — with `fetch` and the API client mocked. They don't depend on
+a running Ollama instance or Backend API, and don't exercise ADK's `Runner`/`LlmAgent` machinery
+directly, since that's thin wiring around logic that's already covered (consistent with the
+root project's own `jest.config.js`, which excludes `server.ts` from coverage).
 
-## Architecture Expectations
+## Known limitations
 
-A typical interaction flow:
-
-```
-Admin UI (Chatbot)
-   ↓
-Agent Service (ADK)
-   ↓
-Backend API (/api)
-```
-
-We will evaluate:
-- Separation of concerns
-- Tool definitions and usage
-- Error handling and recovery
-- Code structure and readability
-
----
-
-## AI Coding Tools
-
-You may use AI-assisted coding tools (e.g., Copilot, Cursor, ChatGPT).
-
-However:
-- You are expected to **fully understand the code**
-- You must be able to explain:
-    - Design decisions
-    - Agent behavior
-    - Tradeoffs and limitations
-
-We will discuss this during the review.
-
----
-
-## Engineering Best Practices Expectations
-
-### Version Control & Commits
-- Make small, logical commits
-- Write clear, descriptive commit messages
-- Avoid large or unrelated commits
-- Your commit history should tell a coherent story
-
-We will review commit history as part of the evaluation.
-
-### Unit Testing
-- Provide unit tests for core agent logic
-- Test intent handling, validation, and error paths
-- Mock or stub external dependencies (LLMs, APIs)
-- Favor meaningful behavior tests over raw coverage
-
----
-
-## Time & Scope Guidance
-
-Expected effort: **4–6 hours**.
-
-You are **not expected** to:
-- Build a production-ready system
-- Implement every possible workflow
-- Perfect the UI
-
-We are interested in:
-- Sound architecture
-- Clear reasoning
-- Thoughtful tradeoffs
-
----
-
-## Submission Guidelines
-
-Please include:
-1. **Source Code with git history**
-2. **Updated README**
-    - Setup instructions
-    - Architecture overview
-    - Known limitations
-3. **Tests**
-4. **Demo**
-    - Live runnable project **or**
-    - Short recorded walkthrough
-
----
-
-## Evaluation Criteria
-
-We will evaluate:
-
-1. Agent design and reasoning
-2. API integration correctness
-3. Error handling and recovery
-4. Code quality and test coverage
-5. Communication and engineering judgment
-
----
-
-If you have questions about expected behavior or constraints, please reach out to your hiring contact.
-
-Good luck - we’re excited to see how you approach this.
+- **No OpenAI/AI-SDK-compatible connector for Ollama in `@google/adk`.** The installed
+  package (`@google/adk@2.4.0`) only ships a first-party Gemini connector; the extension point
+  is the abstract `BaseLlm` class. `agent-service/src/agent/model.ts` implements that class
+  directly against Ollama's OpenAI-compatible `/chat/completions` endpoint (request/response
+  conversion, tool-call mapping, and SSE stream parsing). This was the most standards-based
+  option available at build time — a future ADK release may ship a native connector worth
+  switching to.
+- **Streaming only covers text, not tool-call progress.** `POST /chat` streams the reply as
+  Server-Sent Events, and the chat widget renders it token-by-token. Nothing streams while a
+  tool is actually being called (there's no text to show yet) — the widget shows "Thinking..."
+  until the model starts producing its summary of the tool result, which then streams in.
+- **Conversation memory is in-process and per-session only.** ADK's in-memory session service
+  keeps short-term context per browser session (a random id generated on page load) and is
+  lost if the agent service restarts.
+- **Single admin dashboard origin.** The agent service's CORS is locked to `ADMIN_ORIGIN`
+  (default `http://localhost:3000`); there's no auth on `/chat` beyond that, since this is a
+  local admin tool, not a deployed multi-tenant service.
+- **Pre-existing Backend API issues, not introduced by this change:** two tests in the root
+  project's own `src/__tests__/orders.test.ts` fail against the unmodified Backend API
+  (`subtotal`/`taxTotal` double-counts tax in `calculateOrderTotals`, and a full refund can
+  leave `paymentStatus` as `partially_refunded` instead of `refunded` due to rounding) — left
+  as-is since the Backend API was provided as "fully functional" and out of scope for this
+  assessment.
